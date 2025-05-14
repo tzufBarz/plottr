@@ -1,27 +1,23 @@
 import { PlotBuilder, ScatterPlot } from "./models/plot";
+import Papa from 'papaparse';
 
-var plot1: ScatterPlot = {
-    points: [
-        [0, 0],
-        [1, 1],
-        [2, 4],
-        [3, 9],
-    ]
-}
+const svgContainer = document.getElementById('svgContainer');
 
-var plot2: ScatterPlot = {
-    points: [
-        [-4, 0],
-        [1, 2],
-        [3, 3]
-    ],
-    color: 'red'
-}
+document.getElementById('csvInput')!.addEventListener('change', (event) => {
+  const file = (event.target as HTMLInputElement).files?.[0];
+  if (!file) return;
 
-const parser = new DOMParser();
+  Papa.parse(file, {
+    complete: (results: { data: string[][] }) => {
+      const rawData = results.data as string[][];
+      const points: [number, number][] = rawData
+        .filter(row => row.length >= 2 && !isNaN(Number(row[0])) && !isNaN(Number(row[1])))
+        .map(row => [Number(row[0]), Number(row[1])]);
 
-const plot = new PlotBuilder().scatterPlot(plot1).scatterPlot(plot2).trendline(0, 'polynomial', { order: 2 }).trendline(1, 'linear').build().render()
-
-var doc = parser.parseFromString(plot, 'image/svg+xml');
-
-document.body.appendChild(doc.documentElement);
+      const plotSVG = new PlotBuilder()
+        .scatterPlot({ points })
+        .trendline(0, 'linear').build().render()
+      svgContainer!.innerHTML = plotSVG;
+    }
+  })
+})
