@@ -1,176 +1,231 @@
 const svgBuilder = require('svg-builder');
-const { writeFileSync } = require('fs');
 const regression = require('regression');
 
-export function createScatterPlot(
-  points: [number, number][],
-  width = 500,
-  height = 500,
-  padding = 40,
-  intervalX = 2, // Interval for X-axis labels
-  intervalY = 2,  // Interval for Y-axis labels
-  trendline = true
-): void {
-  const xs = points.map(p => p[0]);
-  const ys = points.map(p => p[1]);
+type RegressionMethod = 'linear' | 'polynomial' | 'exponential' | 'logarithmic' | 'power';
+export type ScatterPlot = { points: [number, number][], color?: string };
 
-  const minX = Math.min(0, ...xs);
-  const maxX = Math.max(0, ...xs);
-  const minY = Math.min(0, ...ys);
-  const maxY = Math.max(0, ...ys);
+export class PlotBuilder {
+  private width: number = 800;
+  private height: number = 600;
+  private padding: number = 40;
+  private intervalX: number = 1;
+  private intervalY: number = 1;
 
-  const plotWidth = width - 2 * padding;
-  const plotHeight = height - 2 * padding;
+  private minX: number = 0;
+  private maxX: number = 0;
+  private minY: number = 0;
+  private maxY: number = 0;
+  private plotWidth: number = this.width - 2 * this.padding;
+  private plotHeight: number = this.height - 2 * this.padding;
 
-  const scaleX = (x: number) => padding + ((x - minX) / (maxX - minX)) * plotWidth;
-  const scaleY = (y: number) => height - padding - ((y - minY) / (maxY - minY)) * plotHeight;
+  private scatterPlots: ScatterPlot[] = [];
+  private trendlines: { plotI: number, method: RegressionMethod, options: any }[] = [];
 
-  let svg = svgBuilder.width(width).height(height);
-
-  // Background
-  svg = svg.rect({
-    x: 0,
-    y: 0,
-    width,
-    height,
-    fill: '#222'
-  });
-
-  const gridColor = 'white';
-  const gridOpacity = 0.1;
-
-  // Vertical grid lines (X-axis)
-  for (let x = minX; x <= maxX; x += intervalX) {
-    const xPos = scaleX(x);
-    if (xPos >= padding && xPos <= width - padding) {
-      svg = svg.line({
-        x1: xPos,
-        y1: padding,
-        x2: xPos,
-        y2: height - padding,
-        stroke: gridColor,
-        'stroke-width': 1,
-        'stroke-opacity': gridOpacity
-      });
+  constructor(params?: {width: number, height: number, padding: number, intervalX: number, intervalY: number}) {
+    if (params) {
+      this.width = params.width || this.width;
+      this.height = params.height || this.height;
+      this.padding = params.padding || this.padding;
+      this.intervalX = params.intervalX || this.intervalX;
+      this.intervalY = params.intervalY || this.intervalY;
+      this.plotWidth = this.width - 2 * this.padding;
+      this.plotHeight = this.height - 2 * this.padding;
     }
   }
 
-  // Horizontal grid lines (Y-axis)
-  for (let y = minY; y <= maxY; y += intervalY) {
-    const yPos = scaleY(y);
-    if (yPos >= padding && yPos <= height - padding) {
-      svg = svg.line({
-        x1: padding,
-        y1: yPos,
-        x2: width - padding,
-        y2: yPos,
-        stroke: gridColor,
-        'stroke-width': 1,
-        'stroke-opacity': gridOpacity
-      });
+  scaleX(x: number): number {
+    return this.padding + ((x - this.minX) / (this.maxX - this.minX)) * this.plotWidth;
+  }
+  scaleY(y: number): number {
+    return this.height - this.padding - ((y - this.minY) / (this.maxY - this.minY)) * this.plotHeight;
+  }
+
+  scatterPlot({ points, color }: ScatterPlot): this {
+    this.scatterPlots.push({ points, color });
+
+    const xs = points.map(p => p[0]);
+    const ys = points.map(p => p[1]);
+
+    this.minX = Math.min(0, this.minX, ...xs);
+    this.maxX = Math.max(0, this.maxX, ...xs);
+    this.minY = Math.min(0, this.minY, ...ys);
+    this.maxY = Math.max(0, this.maxY, ...ys);
+
+    return this;
+  }
+
+  private getRegression(points: [number, number][], method: RegressionMethod, options: any = {}) {
+    switch (method) {
+      case 'linear':
+        return regression.linear(points);
+      case 'polynomial':
+        return regression.polynomial(points, { order: options.order || 2 });
+      case 'exponential':
+        return regression.exponential(points);
+      case 'logarithmic':
+        return regression.logarithmic(points);
+      case 'power':
+        return regression.power(points);
+      default:
+        throw new Error(`Unsupported regression method: ${method}`);
     }
   }
 
-  // X-axis
-  if (minY <= 0 && maxY >= 0) {
-    const yZero = scaleY(0);
-    svg = svg.line({
-      x1: padding,
-      y1: yZero,
-      x2: width - padding,
-      y2: yZero,
-      stroke: 'white',
-      'stroke-width': 1
-    });
+  trendline(plotI: number, method: RegressionMethod, options: any = {}): this {
+    this.trendlines.push({ plotI, method, options });
 
-    // X-axis labels
-    for (let x = minX; x <= maxX; x += intervalX) {
-      const xPos = scaleX(x);
-      if (xPos >= padding && xPos <= width - padding) { // Check bounds
-        svg = svg.text({
-          x: xPos,
-          y: yZero + 15, // Space below the axis
-          fill: 'white',
-          'font-size': 12,
-          'text-anchor': 'middle'
-        }, `${x}`);
+    return this;
+  }
+
+  private buildScatterPlot({ points, color }: ScatterPlot, svg: any): any {
+    // X-axis
+    if (this.minY <= 0 && this.maxY >= 0) {
+      const yZero = this.scaleY(0);
+      svg = svg.line({
+        x1: this.padding,
+        y1: yZero,
+        x2: this.width - this.padding,
+        y2: yZero,
+        stroke: 'white',
+        'stroke-width': 1
+      });
+
+      // X-axis labels
+      for (let x = this.minX; x <= this.maxX; x += this.intervalX) {
+        const xPos = this.scaleX(x);
+        if (xPos >= this.padding && xPos <= this.width - this.padding) { // Check bounds
+          svg = svg.text({
+            x: xPos,
+            y: yZero + 15, // Space below the axis
+            fill: 'white',
+            'font-size': 12,
+            'text-anchor': 'middle'
+          }, `${x}`);
+        }
       }
     }
-  }
 
-  // Y-axis
-  if (minX <= 0 && maxX >= 0) {
-    const xZero = scaleX(0);
-    svg = svg.line({
-      x1: xZero,
-      y1: padding,
-      x2: xZero,
-      y2: height - padding,
-      stroke: 'white',
-      'stroke-width': 1
-    });
+    // Y-axis
+    if (this.minX <= 0 && this.maxX >= 0) {
+      const xZero = this.scaleX(0);
+      svg = svg.line({
+        x1: xZero,
+        y1: this.padding,
+        x2: xZero,
+        y2: this.height - this.padding,
+        stroke: 'white',
+        'stroke-width': 1
+      });
 
-    // Y-axis labels
-    for (let y = minY; y <= maxY; y += intervalY) {
-      const yPos = scaleY(y);
-      if (yPos >= padding && yPos <= height - padding) { // Check bounds
-        svg = svg.text({
-          x: xZero - 15, // Space to the left of the axis
-          y: yPos,
-          fill: 'white',
-          'font-size': 12,
-          'text-anchor': 'middle',
-        }, `${y}`);
+      // Y-axis labels
+      for (let y = this.minY; y <= this.maxY; y += this.intervalY) {
+        const yPos = this.scaleY(y);
+        if (yPos >= this.padding && yPos <= this.height - this.padding) { // Check bounds
+          svg = svg.text({
+            x: xZero - 15, // Space to the left of the axis
+            y: yPos,
+            fill: 'white',
+            'font-size': 12,
+            'text-anchor': 'middle',
+          }, `${y}`);
+        }
       }
     }
+
+    // Points
+    for (const [x, y] of points) {
+      svg = svg.circle({
+        cx: this.scaleX(x),
+        cy: this.scaleY(y),
+        r: 4,
+        fill: color || 'white'
+      });
+    }
+
+    return svg;
   }
 
-  // Points
-  for (const [x, y] of points) {
-    svg = svg.circle({
-      cx: scaleX(x),
-      cy: scaleY(y),
-      r: 4,
-      fill: 'white'
-    });
-  }
-
-  if (trendline) {
-    const data = points;
-    const result = regression.linear(data, { order: 2 });
-
+  private buildTrendline({ points, color }: ScatterPlot, method: RegressionMethod, options: any, svg: any): any {
+    const result = this.getRegression(points, method, options);
+    
     const numSteps = 200; // more steps = smoother curve
-    const stepSize = (maxX - minX) / numSteps;
+    const stepSize = (this.maxX - this.minX) / numSteps;
 
     const smoothPoints: [number, number][] = [];
     for (let i = 0; i <= numSteps; i++) {
-      const x = minX + i * stepSize;
+      const x = this.minX + i * stepSize;
       const [_, y] = result.predict(x); // returns [x, y]
       smoothPoints.push([x, y]);
     }
 
     const trendPoints = result.points; // Array of [x, y] for the curve
     for (let i = 0; i < trendPoints.length - 1; i++) {
-    const [x1, y1] = trendPoints[i];
-    const [x2, y2] = trendPoints[i + 1];
+      const [x1, y1] = trendPoints[i];
+      const [x2, y2] = trendPoints[i + 1];
 
-    for (let i = 0; i < smoothPoints.length - 1; i++) {
-      const [x1, y1] = smoothPoints[i];
-      const [x2, y2] = smoothPoints[i + 1];
-    
-      svg = svg.line({
-        x1: scaleX(x1),
-        y1: scaleY(y1),
-        x2: scaleX(x2),
-        y2: scaleY(y2),
-        stroke: 'orange',
-        'stroke-width': 2
-      });
-    }    
+      for (let i = 0; i < smoothPoints.length - 1; i++) {
+        const [x1, y1] = smoothPoints[i];
+        const [x2, y2] = smoothPoints[i + 1];
+      
+        svg = svg.line({
+          x1: this.scaleX(x1),
+          y1: this.scaleY(y1),
+          x2: this.scaleX(x2),
+          y2: this.scaleY(y2),
+          stroke: color || 'white',
+          'stroke-width': 2
+        });
+      }    
+    }
   }
 
-  }
+  build(): any {
+    const gridColor = 'white';
+    const gridOpacity = 0.1;
 
-  const svgContent = svg.render();
-  writeFileSync('output/plot.svg', svgContent);
+    let svg = svgBuilder.width(this.width).height(this.height).rect({
+      x: 0,
+      y: 0,
+      width: this.width,
+      height: this.height,
+      fill: '#222'
+    });
+
+    this.scatterPlots.forEach(scatterPlot => this.buildScatterPlot(scatterPlot, svg));
+    this.trendlines.forEach(({ plotI, method, options }) => this.buildTrendline(this.scatterPlots[plotI], method, options, svg));
+
+    // Vertical grid lines (X-axis)
+    for (let x = this.minX; x <= this.maxX; x += this.intervalX) {
+      const xPos = this.scaleX(x);
+      if (xPos >= this.padding && xPos <= this.width - this.padding) {
+        svg = svg.line({
+          x1: xPos,
+          y1: this.padding,
+          x2: xPos,
+          y2: this.height - this.padding,
+          stroke: gridColor,
+          'stroke-width': 1,
+          'stroke-opacity': gridOpacity
+        });
+      }
+    }
+
+    // Horizontal grid lines (Y-axis)
+    for (let y = this.minY; y <= this.maxY; y += this.intervalY) {
+      const yPos = this.scaleY(y);
+      if (yPos >= this.padding && yPos <= this.height - this.padding) {
+        svg = svg.line({
+          x1: this.padding,
+          y1: yPos,
+          x2: this.width - this.padding,
+          y2: yPos,
+          stroke: gridColor,
+          'stroke-width': 1,
+          'stroke-opacity': gridOpacity
+        });
+      }
+    }
+
+    return svg;
+  }
 }
