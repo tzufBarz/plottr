@@ -8,6 +8,7 @@ document.getElementById('csvInput')!.addEventListener('change', (event) => {
   if (!file) return;
 
   Papa.parse(file, {
+<<<<<<< HEAD
     header: true,
     complete: (results: { data: Record<string, string>[] }) => {
       const data = results.data as Record<string, string>[];
@@ -28,6 +29,18 @@ document.getElementById('csvInput')!.addEventListener('change', (event) => {
       const svg = builder.build().render();
 
       svgContainer!.innerHTML = svg;
+=======
+    complete: (results: { data: string[][] }) => {
+      const rawData = results.data as string[][];
+      const points: [number, number][] = rawData
+        .filter(row => row.length >= 2 && !isNaN(Number(row[0])) && !isNaN(Number(row[1])))
+        .map(row => [Number(row[0]), Number(row[1])]);
+
+      const plotSVG = new PlotBuilder()
+        .scatterPlot({ points })
+        .trendline(0, 'linear').build().render()
+      svgContainer!.innerHTML = plotSVG;
+>>>>>>> refs/remotes/origin/main
     }
   })
 })
