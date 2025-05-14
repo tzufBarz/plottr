@@ -2,7 +2,8 @@
   "dependencies": {
     "regression": "^2.0.1",
     "svg-builder": "^2.0.0",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "webpack": "^5.99.8"
   },
   "scripts": {
     "build": "tsc",
