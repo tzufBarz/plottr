@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "target": "ES6",                      // or ES2015+ depending on your needs
+        "module": "commonjs",                 // or ESNext if using Deno
+        "outDir": "./dist",                   // Output directory for compiled JS
+        "rootDir": "./src",                   // Where your TypeScript files are
+        "strict": true,                       // Optional: enables strict mode
+        "esModuleInterop": true,              // Optional: for smoother imports
+        "skipLibCheck": true                  // Optional: faster compilation
+    },
+    "include": ["src/**/*.ts"],              // Ensure all your TypeScript files are included
+    "exclude": ["node_modules"]
+}  

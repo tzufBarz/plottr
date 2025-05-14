@@ -1,0 +1,15 @@
+{
+  "dependencies": {
+    "regression": "^2.0.1",
+    "svg-builder": "^2.0.0",
+    "typescript": "^5.8.3"
+  },
+  "scripts": {
+    "build": "tsc",
+    "run": "node dist/index.js",
+    "start": "npm run build && npm run run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.18"
+  }
+}
