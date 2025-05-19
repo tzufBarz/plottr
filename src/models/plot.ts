@@ -23,7 +23,7 @@ export class PlotBuilder {
 
   private xTitle: string = "";
 
-  constructor(params?: {width: number, height: number, padding: number, intervalX: number, intervalY: number}) {
+  constructor(params?: {width?: number, height?: number, padding?: number, intervalX?: number, intervalY?: number}) {
     if (params) {
       this.width = params.width || this.width;
       this.height = params.height || this.height;
@@ -44,8 +44,6 @@ export class PlotBuilder {
 
   scatterPlot({ points, color, title }: ScatterPlot): this {
     this.scatterPlots.push({ points, color: color || `hsl(${this.scatterPlots.length * 30},60%,60%)`, title });
-
-    console.log(this.scatterPlots[this.scatterPlots.length - 1].color)
 
     const xs = points.map(p => p[0]);
     const ys = points.map(p => p[1]);
@@ -83,7 +81,6 @@ export class PlotBuilder {
 
   setXTitle(xTitle: string): this {
     this.xTitle = xTitle;
-    console.log(this.xTitle);
 
     return this;
   }
@@ -205,25 +202,39 @@ export class PlotBuilder {
       smoothPoints.push([x, y]);
     }
 
-    const trendPoints = result.points; // Array of [x, y] for the curve
-    for (let i = 0; i < trendPoints.length - 1; i++) {
-      const [x1, y1] = trendPoints[i];
-      const [x2, y2] = trendPoints[i + 1];
+    const pathData = smoothPoints.map((point, index) => {
+      const command = `${index === 0 ? 'M' : 'L'}${this.scaleX(point[0])},${this.scaleY(point[1])}`;
+      return command;
+    }).join(' ');
 
-      for (let i = 0; i < smoothPoints.length - 1; i++) {
-        const [x1, y1] = smoothPoints[i];
-        const [x2, y2] = smoothPoints[i + 1];
+    svg = svg.path({
+      d: pathData,
+      fill: 'none',
+      stroke: color || 'white',
+      'stroke-width': 2
+    })
+
+    // const trendPoints = result.points; // Array of [x, y] for the curve
+    // for (let i = 0; i < trendPoints.length - 1; i++) {
+    //   const [x1, y1] = trendPoints[i];
+    //   const [x2, y2] = trendPoints[i + 1];
+
+    //   for (let i = 0; i < smoothPoints.length - 1; i++) {
+    //     const [x1, y1] = smoothPoints[i];
+    //     const [x2, y2] = smoothPoints[i + 1];
       
-        svg = svg.line({
-          x1: this.scaleX(x1),
-          y1: this.scaleY(y1),
-          x2: this.scaleX(x2),
-          y2: this.scaleY(y2),
-          stroke: color || 'white',
-          'stroke-width': 2
-        });
-      }    
-    }
+    //     svg = svg.line({
+    //       x1: this.scaleX(x1),
+    //       y1: this.scaleY(y1),
+    //       x2: this.scaleX(x2),
+    //       y2: this.scaleY(y2),
+    //       stroke: color || 'white',
+    //       'stroke-width': 2
+    //     });
+    //   }    
+    // }
+
+    return svg;
   }
 
   build(): any {
@@ -238,10 +249,8 @@ export class PlotBuilder {
       fill: '#222'
     });
 
-    svg = this.buildAxes(svg);
-
-    this.scatterPlots.forEach(scatterPlot => this.buildScatterPlot(scatterPlot, svg));
-    this.trendlines.forEach(({ plotI, method, options }) => this.buildTrendline(this.scatterPlots[plotI], method, options, svg));
+    this.scatterPlots.forEach(scatterPlot => { svg = this.buildScatterPlot(scatterPlot, svg) } );
+    this.trendlines.forEach(({ plotI, method, options }) => { svg = this.buildTrendline(this.scatterPlots[plotI], method, options, svg) } );
 
     // Vertical grid lines (X-axis)
     for (let x = this.minX; x <= this.maxX; x += this.intervalX) {
@@ -274,6 +283,8 @@ export class PlotBuilder {
         });
       }
     }
+
+    svg = this.buildAxes(svg);
 
     return svg;
   }
