@@ -47,20 +47,27 @@ document.getElementById('saveButton')?.addEventListener('click', () => {
   element.remove();
 });
 
-const regressionInput = document.getElementById('regressionInput') as HTMLSelectElement;
+const regressionMethodInput = document.getElementById('regressionMethodInput') as HTMLSelectElement;
+const regressionOrderInput = document.getElementById('regressionOrderInput') as HTMLInputElement;
+
+function updateRegression() {
+  const regressionMethod = (regressionMethodInput as HTMLSelectElement).value as RegressionMethod;
+  const regressionOrder = parseInt(regressionOrderInput.value);
+
+  yColumns.forEach((_, plotI) => {
+    builder.setTrendline(plotI, regressionMethod || null, { order: regressionOrder });
+  });
+
+  updatePlot();
+}
+
 
 Object.values(RegressionMethod).forEach(method => {
   const option = document.createElement('option');
   option.value = method;
   option.textContent = method;
-  regressionInput.appendChild(option);
+  regressionMethodInput.appendChild(option);
 });
 
-regressionInput.addEventListener('change', (event) => {
-  const selectedMethod = (event.target as HTMLSelectElement).value as RegressionMethod;
-  yColumns.forEach((_, plotI) => {
-    builder.setTrendline(plotI, selectedMethod || null);
-  });
-
-  updatePlot();
-});
+regressionMethodInput.addEventListener('change', updateRegression);
+regressionOrderInput.addEventListener('input', updateRegression);
