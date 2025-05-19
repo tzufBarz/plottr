@@ -1,8 +1,15 @@
 const svgBuilder = require('svg-builder');
 const regression = require('regression');
 
-type RegressionMethod = 'linear' | 'polynomial' | 'exponential' | 'logarithmic' | 'power';
-export type ScatterPlot = { points: [number, number][], color?: string, title: string };
+export enum RegressionMethod {
+  Linear = 'Linear',
+  Polynomial = 'Polynomial',
+  Exponential = 'Exponential',
+  Logarithmic = 'Logarithmic',
+  Power = 'Power'
+}
+
+export type ScatterPlot = { points: [number, number][], color?: string, title: string, regressionMethod?: RegressionMethod, regressionOptions?: any };
 
 export class PlotBuilder {
   private width: number = 800;
@@ -21,7 +28,6 @@ export class PlotBuilder {
   private plotHeight: number = this.height - 2 * this.padding;
 
   private scatterPlots: ScatterPlot[] = [];
-  private trendlines: { plotI: number, method: RegressionMethod, options: any }[] = [];
 
   private xTitle: string = "";
 
@@ -44,8 +50,8 @@ export class PlotBuilder {
     return this.height - this.padding - ((y - this.minY) / (this.maxY - this.minY)) * this.plotHeight;
   }
 
-  scatterPlot({ points, color, title }: ScatterPlot): this {
-    this.scatterPlots.push({ points, color: color || `hsl(${this.scatterPlots.length * 30},60%,60%)`, title });
+  scatterPlot({ points, color, title, regressionMethod, regressionOptions }: ScatterPlot): this {
+    this.scatterPlots.push({ points, color: color || `hsl(${this.scatterPlots.length * 30},60%,60%)`, title, regressionMethod, regressionOptions });
 
     const xs = points.map(p => p[0]);
     const ys = points.map(p => p[1]);
@@ -60,25 +66,19 @@ export class PlotBuilder {
 
   private getRegression(points: [number, number][], method: RegressionMethod, options: any = {}) {
     switch (method) {
-      case 'linear':
+      case RegressionMethod.Linear:
         return regression.linear(points);
-      case 'polynomial':
+      case RegressionMethod.Polynomial:
         return regression.polynomial(points, { order: options.order || 2 });
-      case 'exponential':
+      case RegressionMethod.Exponential:
         return regression.exponential(points);
-      case 'logarithmic':
+      case RegressionMethod.Logarithmic:
         return regression.logarithmic(points);
-      case 'power':
+      case RegressionMethod.Power:
         return regression.power(points);
       default:
         throw new Error(`Unsupported regression method: ${method}`);
     }
-  }
-
-  trendline(plotI: number, method: RegressionMethod, options: any = {}): this {
-    this.trendlines.push({ plotI, method, options });
-
-    return this;
   }
 
   setXTitle(xTitle: string): this {
@@ -258,6 +258,17 @@ export class PlotBuilder {
     return svg;
   }
 
+  public setTrendline(plotI: number, method: RegressionMethod, options?: any): this {
+    if (this.scatterPlots[plotI]) {
+      this.scatterPlots[plotI].regressionMethod = method;
+      this.scatterPlots[plotI].regressionOptions = options;
+    } else {
+      throw new Error(`Plot index ${plotI} out of bounds`);
+    }
+
+    return this;
+  }
+
   build(): any {
     this.intervalX = (this.maxX - this.minX) / this.horizontalGrid;
     this.intervalY = (this.maxY - this.minY) / this.verticalGrid;
@@ -278,8 +289,12 @@ export class PlotBuilder {
 
     svg = this.buildGrid(svg);
 
-    this.scatterPlots.forEach(scatterPlot => { svg = this.buildScatterPlot(scatterPlot, svg) } );
-    this.trendlines.forEach(({ plotI, method, options }) => { svg = this.buildTrendline(this.scatterPlots[plotI], method, options, svg) } );
+    this.scatterPlots.forEach(scatterPlot => {
+      svg = this.buildScatterPlot(scatterPlot, svg);
+      if (scatterPlot.regressionMethod) {
+        svg = this.buildTrendline(scatterPlot, scatterPlot.regressionMethod, scatterPlot.regressionOptions || {}, svg);
+      }
+    });
 
     svg = this.buildAxes(svg);
 
