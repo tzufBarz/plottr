@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plottr</title>
+</head>
+<body>
+    <div id="options">
+        <input type="file" id="csvInput" accept=".csv" />
+        <button id="saveButton">Save</button>
+        <label>Use Regression:
+            <select id="regressionMethodInput">
+                <option value="">None</option>
+            </select>
+        </label>
+        <label>Regression Order:
+            <input type="number" id="regressionOrderInput" min="2" value="2" />
+        </label>
+    </div>
+    <div id="svgContainer" class="center"></div>
+</body>
+</html>

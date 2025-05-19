@@ -1,5 +1,6 @@
 import { PlotBuilder, ScatterPlot, RegressionMethod } from "./models/plot";
 import Papa from 'papaparse';
+import './style.css';
 
 const svgContainer = document.getElementById('svgContainer');
 
