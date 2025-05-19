@@ -2,7 +2,7 @@ const svgBuilder = require('svg-builder');
 const regression = require('regression');
 
 type RegressionMethod = 'linear' | 'polynomial' | 'exponential' | 'logarithmic' | 'power';
-export type ScatterPlot = { points: [number, number][], color?: string };
+export type ScatterPlot = { points: [number, number][], color?: string, title: string };
 
 export class PlotBuilder {
   private width: number = 800;
@@ -20,6 +20,8 @@ export class PlotBuilder {
 
   private scatterPlots: ScatterPlot[] = [];
   private trendlines: { plotI: number, method: RegressionMethod, options: any }[] = [];
+
+  private xTitle: string = "";
 
   constructor(params?: {width: number, height: number, padding: number, intervalX: number, intervalY: number}) {
     if (params) {
@@ -40,8 +42,10 @@ export class PlotBuilder {
     return this.height - this.padding - ((y - this.minY) / (this.maxY - this.minY)) * this.plotHeight;
   }
 
-  scatterPlot({ points, color }: ScatterPlot): this {
-    this.scatterPlots.push({ points, color });
+  scatterPlot({ points, color, title }: ScatterPlot): this {
+    this.scatterPlots.push({ points, color: color || `hsl(${this.scatterPlots.length * 30},60%,60%)`, title });
+
+    console.log(this.scatterPlots[this.scatterPlots.length - 1].color)
 
     const xs = points.map(p => p[0]);
     const ys = points.map(p => p[1]);
@@ -77,7 +81,14 @@ export class PlotBuilder {
     return this;
   }
 
-  private buildScatterPlot({ points, color }: ScatterPlot, svg: any): any {
+  setXTitle(xTitle: string): this {
+    this.xTitle = xTitle;
+    console.log(this.xTitle);
+
+    return this;
+  }
+
+  private buildAxes(svg: any): any {
     // X-axis
     if (this.minY <= 0 && this.maxY >= 0) {
       const yZero = this.scaleY(0);
@@ -103,6 +114,15 @@ export class PlotBuilder {
           }, `${x}`);
         }
       }
+
+    // X axis title
+      svg = svg.text({
+        x: this.scaleX((this.minX + this.maxX) / 2),
+        y: this.scaleY(0) + 15,
+        fill: 'white',
+        'font-size': 12,
+        'text-anchor': 'middle'
+      }, this.xTitle)
     }
 
     // Y-axis
@@ -130,8 +150,35 @@ export class PlotBuilder {
           }, `${y}`);
         }
       }
+
+      // Y axis titles
+      svg = svg.rect({
+        x: this.padding,
+        y: this.padding / 4,
+        width: this.width - 2 * this.padding,
+        height: this.padding / 2,
+        rx: this.padding / 4,
+        fill: '#1115'
+      });
+
+      let i = 0;
+      this.scatterPlots.forEach(plot => {
+        svg = svg.text({
+          x: this.padding + (i + 1) * (this.width - 2 * this.padding) / (this.scatterPlots.length + 1),
+          y: this.padding / 2,
+          fill: plot.color || 'white',
+          'font-size': 12,
+          'text-anchor': 'middle',
+          'dominant-baseline': 'middle'
+        }, plot.title);
+        i++;
+      });
     }
 
+    return svg;
+  }
+
+  private buildScatterPlot({ points, color, title }: ScatterPlot, svg: any): any {
     // Points
     for (const [x, y] of points) {
       svg = svg.circle({
@@ -145,7 +192,7 @@ export class PlotBuilder {
     return svg;
   }
 
-  private buildTrendline({ points, color }: ScatterPlot, method: RegressionMethod, options: any, svg: any): any {
+  private buildTrendline({ points, color, title }: ScatterPlot, method: RegressionMethod, options: any, svg: any): any {
     const result = this.getRegression(points, method, options);
     
     const numSteps = 200; // more steps = smoother curve
@@ -190,6 +237,8 @@ export class PlotBuilder {
       height: this.height,
       fill: '#222'
     });
+
+    svg = this.buildAxes(svg);
 
     this.scatterPlots.forEach(scatterPlot => this.buildScatterPlot(scatterPlot, svg));
     this.trendlines.forEach(({ plotI, method, options }) => this.buildTrendline(this.scatterPlots[plotI], method, options, svg));

@@ -21,9 +21,12 @@ document.getElementById('csvInput')!.addEventListener('change', (event) => {
           Number(row["x"]),
           Number(row[yKey])
         ])).filter(point => !isNaN(point[0]) && !isNaN(point[1]));
-        builder.scatterPlot({ points, color: data[0][yKey] } as ScatterPlot);
+        builder.scatterPlot({ points, title: data[0][yKey] } as ScatterPlot)
+        // .trendline(i, "polynomial", { order: 2 });
         i++;
       }
+
+      builder.setXTitle(data[0]["x"]);
 
       const svg = builder.build().render();
 
