@@ -1,0 +1,50 @@
+body {
+    background-color: #111;
+    color: white;
+}
+
+svg {
+    border-radius: 10px;
+}
+
+#svgContainer {
+    display: block;
+    margin: 50px auto;
+    width: fit-content;
+}
+
+#options {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    gap: 20px;
+}
+
+#options>* {
+    background-color: #222;
+    padding: 10px;
+    border-radius: 10px;
+    transition: background-color 0.3s;
+}
+
+#options>*:hover {
+    background-color: #333;
+}
+
+#options button {
+    border: none;
+    color: white;
+    cursor: pointer;
+}
+
+#options input[type="number"] {
+    background-color: transparent;
+    color: white;
+    border: none;
+    outline: none;
+    border-bottom: 1px solid white;
+}
+
+svg, #options>* {
+    box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.3);
+}
