@@ -8,6 +8,8 @@ export class PlotBuilder {
   private width: number = 800;
   private height: number = 600;
   private padding: number = 40;
+  private verticalGrid: number = 8;
+  private horizontalGrid: number = 8;
   private intervalX: number = 1;
   private intervalY: number = 1;
 
@@ -23,13 +25,13 @@ export class PlotBuilder {
 
   private xTitle: string = "";
 
-  constructor(params?: {width?: number, height?: number, padding?: number, intervalX?: number, intervalY?: number}) {
+  constructor(params?: {width?: number, height?: number, padding?: number, verticalGrid?: number, horizontalGrid?: number}) {
     if (params) {
       this.width = params.width || this.width;
       this.height = params.height || this.height;
       this.padding = params.padding || this.padding;
-      this.intervalX = params.intervalX || this.intervalX;
-      this.intervalY = params.intervalY || this.intervalY;
+      this.verticalGrid = params.verticalGrid || this.verticalGrid;
+      this.horizontalGrid = params.horizontalGrid || this.horizontalGrid;
       this.plotWidth = this.width - 2 * this.padding;
       this.plotHeight = this.height - 2 * this.padding;
     }
@@ -108,14 +110,14 @@ export class PlotBuilder {
             fill: 'white',
             'font-size': 12,
             'text-anchor': 'middle'
-          }, `${x}`);
+          }, `${parseFloat(x.toFixed(2))}`);
         }
       }
 
     // X axis title
       svg = svg.text({
         x: this.scaleX((this.minX + this.maxX) / 2),
-        y: this.scaleY(0) + 15,
+        y: this.scaleY(0) + 30,
         fill: 'white',
         'font-size': 12,
         'text-anchor': 'middle'
@@ -144,7 +146,7 @@ export class PlotBuilder {
             fill: 'white',
             'font-size': 12,
             'text-anchor': 'middle',
-          }, `${y}`);
+          }, `${parseFloat(y.toFixed(2))}`);
         }
       }
 
@@ -214,43 +216,12 @@ export class PlotBuilder {
       'stroke-width': 2
     })
 
-    // const trendPoints = result.points; // Array of [x, y] for the curve
-    // for (let i = 0; i < trendPoints.length - 1; i++) {
-    //   const [x1, y1] = trendPoints[i];
-    //   const [x2, y2] = trendPoints[i + 1];
-
-    //   for (let i = 0; i < smoothPoints.length - 1; i++) {
-    //     const [x1, y1] = smoothPoints[i];
-    //     const [x2, y2] = smoothPoints[i + 1];
-      
-    //     svg = svg.line({
-    //       x1: this.scaleX(x1),
-    //       y1: this.scaleY(y1),
-    //       x2: this.scaleX(x2),
-    //       y2: this.scaleY(y2),
-    //       stroke: color || 'white',
-    //       'stroke-width': 2
-    //     });
-    //   }    
-    // }
-
     return svg;
   }
 
-  build(): any {
+  private buildGrid(svg: any): any {
     const gridColor = 'white';
     const gridOpacity = 0.1;
-
-    let svg = svgBuilder.width(this.width).height(this.height).rect({
-      x: 0,
-      y: 0,
-      width: this.width,
-      height: this.height,
-      fill: '#222'
-    });
-
-    this.scatterPlots.forEach(scatterPlot => { svg = this.buildScatterPlot(scatterPlot, svg) } );
-    this.trendlines.forEach(({ plotI, method, options }) => { svg = this.buildTrendline(this.scatterPlots[plotI], method, options, svg) } );
 
     // Vertical grid lines (X-axis)
     for (let x = this.minX; x <= this.maxX; x += this.intervalX) {
@@ -283,6 +254,32 @@ export class PlotBuilder {
         });
       }
     }
+
+    return svg;
+  }
+
+  build(): any {
+    this.intervalX = (this.maxX - this.minX) / this.horizontalGrid;
+    this.intervalY = (this.maxY - this.minY) / this.verticalGrid;
+
+    if (Math.abs(this.intervalX) > 1) this.intervalX = Math.round(this.intervalX);
+    else this.intervalX = 1 / Math.round(1 / this.intervalX);
+
+    if (Math.abs(this.intervalY) > 1) this.intervalY = Math.round(this.intervalY);
+    else this.intervalY = 1 / Math.round(1 / this.intervalY);
+
+    let svg = svgBuilder.width(this.width).height(this.height).rect({
+      x: 0,
+      y: 0,
+      width: this.width,
+      height: this.height,
+      fill: '#222'
+    });
+
+    svg = this.buildGrid(svg);
+
+    this.scatterPlots.forEach(scatterPlot => { svg = this.buildScatterPlot(scatterPlot, svg) } );
+    this.trendlines.forEach(({ plotI, method, options }) => { svg = this.buildTrendline(this.scatterPlots[plotI], method, options, svg) } );
 
     svg = this.buildAxes(svg);
 
