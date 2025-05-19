@@ -10,6 +10,7 @@ document.getElementById('csvInput')!.addEventListener('change', (event) => {
   Papa.parse(file, {
     header: true,
     complete: (results: { data: Record<string, string>[] }) => {
+
       const data = results.data as Record<string, string>[];
       const yColumns = Object.keys(data[0]).filter(key => key !== 'x');
 
@@ -34,3 +35,12 @@ document.getElementById('csvInput')!.addEventListener('change', (event) => {
     }
   })
 })
+
+document.getElementById('saveButton')?.addEventListener('click', () => {
+  const blob = new Blob([svgContainer!.innerHTML]);
+  const element = document.createElement('a');
+  element.download = `${prompt("Enter File Name: ")}.svg`;
+  element.href = window.URL.createObjectURL(blob);
+  element.click();
+  element.remove();
+});
