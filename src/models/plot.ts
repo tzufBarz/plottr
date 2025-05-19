@@ -25,7 +25,7 @@ export class PlotBuilder {
   private minY: number = 0;
   private maxY: number = 0;
   private plotWidth: number = this.width - 2 * this.padding;
-  private plotHeight: number = this.height - 2 * this.padding;
+  private plotHeight: number = this.height - 3 * this.padding;
 
   private scatterPlots: ScatterPlot[] = [];
 
@@ -47,7 +47,7 @@ export class PlotBuilder {
     return this.padding + ((x - this.minX) / (this.maxX - this.minX)) * this.plotWidth;
   }
   scaleY(y: number): number {
-    return this.height - this.padding - ((y - this.minY) / (this.maxY - this.minY)) * this.plotHeight;
+    return this.height - 2 * this.padding - ((y - this.minY) / (this.maxY - this.minY)) * this.plotHeight;
   }
 
   scatterPlot({ points, color, title, regressionMethod, regressionOptions }: ScatterPlot): this {
@@ -103,7 +103,7 @@ export class PlotBuilder {
       // X-axis labels
       for (let x = this.minX; x <= this.maxX; x += this.intervalX) {
         const xPos = this.scaleX(x);
-        if (xPos >= this.padding && xPos <= this.width - this.padding) { // Check bounds
+        if (x != 0 && xPos >= this.padding && xPos <= this.width - this.padding) { // Check bounds
           svg = svg.text({
             x: xPos,
             y: yZero + 15, // Space below the axis
@@ -131,7 +131,7 @@ export class PlotBuilder {
         x1: xZero,
         y1: this.padding,
         x2: xZero,
-        y2: this.height - this.padding,
+        y2: this.height - 2 * this.padding,
         stroke: 'white',
         'stroke-width': 1
       });
@@ -139,7 +139,7 @@ export class PlotBuilder {
       // Y-axis labels
       for (let y = this.minY; y <= this.maxY; y += this.intervalY) {
         const yPos = this.scaleY(y);
-        if (yPos >= this.padding && yPos <= this.height - this.padding) { // Check bounds
+        if (y != 0 && yPos >= this.padding && yPos <= this.height - this.padding) { // Check bounds
           svg = svg.text({
             x: xZero - 15, // Space to the left of the axis
             y: yPos,
@@ -191,7 +191,7 @@ export class PlotBuilder {
     return svg;
   }
 
-  private buildTrendline({ points, color, title }: ScatterPlot, method: RegressionMethod, options: any, svg: any): any {
+  private buildTrendline({ points, color, title }: ScatterPlot, method: RegressionMethod, options: any, i: number, svg: any): any {
     const result = this.getRegression(points, method, options);
     
     const numSteps = 200; // more steps = smoother curve
@@ -214,7 +214,16 @@ export class PlotBuilder {
       fill: 'none',
       stroke: color || 'white',
       'stroke-width': 2
-    })
+    });
+
+    svg = svg.text({
+      x: this.padding + (i + 1) * (this.width - 2 * this.padding) / (this.scatterPlots.length + 1),
+      y: this.height - this.padding / 2,
+      fill: color || 'white',
+      'font-size': 12,
+      'text-anchor': 'middle',
+      'dominant-baseline': 'middle'
+    }, `[${result.equation}]`);
 
     return svg;
   }
@@ -231,7 +240,7 @@ export class PlotBuilder {
           x1: xPos,
           y1: this.padding,
           x2: xPos,
-          y2: this.height - this.padding,
+          y2: this.height - 2 * this.padding,
           stroke: gridColor,
           'stroke-width': 1,
           'stroke-opacity': gridOpacity
@@ -289,10 +298,10 @@ export class PlotBuilder {
 
     svg = this.buildGrid(svg);
 
-    this.scatterPlots.forEach(scatterPlot => {
+    this.scatterPlots.forEach((scatterPlot, i) => {
       svg = this.buildScatterPlot(scatterPlot, svg);
       if (scatterPlot.regressionMethod) {
-        svg = this.buildTrendline(scatterPlot, scatterPlot.regressionMethod, scatterPlot.regressionOptions || {}, svg);
+        svg = this.buildTrendline(scatterPlot, scatterPlot.regressionMethod, scatterPlot.regressionOptions || {}, i, svg);
       }
     });
 
