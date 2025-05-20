@@ -4,7 +4,7 @@ import './style.css';
 
 const svgContainer = document.getElementById('svgContainer');
 
-const builder = new PlotBuilder();
+let builder: PlotBuilder;
 
 let yColumns: string[];
 
@@ -15,6 +15,7 @@ document.getElementById('csvInput')!.addEventListener('change', (event) => {
   Papa.parse(file, {
     header: true,
     complete: (results: { data: Record<string, string>[] }) => {
+      builder = new PlotBuilder();
 
       const data = results.data as Record<string, string>[];
       yColumns = Object.keys(data[0]).filter(key => key !== 'x');
@@ -35,6 +36,13 @@ document.getElementById('csvInput')!.addEventListener('change', (event) => {
 })
 
 function updatePlot() {
+  const regressionMethod = (regressionMethodInput as HTMLSelectElement).value as RegressionMethod;
+  const regressionOrder = parseInt(regressionOrderInput.value);
+
+  yColumns.forEach((_, plotI) => {
+    builder.setTrendline(plotI, regressionMethod || null, { order: regressionOrder });
+  });
+
   const svg = builder.build().render();
   svgContainer!.innerHTML = svg;
 }
@@ -51,18 +59,6 @@ document.getElementById('saveButton')?.addEventListener('click', () => {
 const regressionMethodInput = document.getElementById('regressionMethodInput') as HTMLSelectElement;
 const regressionOrderInput = document.getElementById('regressionOrderInput') as HTMLInputElement;
 
-function updateRegression() {
-  const regressionMethod = (regressionMethodInput as HTMLSelectElement).value as RegressionMethod;
-  const regressionOrder = parseInt(regressionOrderInput.value);
-
-  yColumns.forEach((_, plotI) => {
-    builder.setTrendline(plotI, regressionMethod || null, { order: regressionOrder });
-  });
-
-  updatePlot();
-}
-
-
 Object.values(RegressionMethod).forEach(method => {
   const option = document.createElement('option');
   option.value = method;
@@ -70,5 +66,5 @@ Object.values(RegressionMethod).forEach(method => {
   regressionMethodInput.appendChild(option);
 });
 
-regressionMethodInput.addEventListener('change', updateRegression);
-regressionOrderInput.addEventListener('input', updateRegression);
+regressionMethodInput.addEventListener('change', updatePlot);
+regressionOrderInput.addEventListener('input', updatePlot);
