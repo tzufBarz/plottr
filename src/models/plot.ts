@@ -100,6 +100,12 @@ export class PlotBuilder {
         'stroke-width': 1
       });
 
+      // Arrow
+      svg = svg.path({
+        d: `M${this.width -  this.padding - 2},${yZero - 5} L${this.width - this.padding + 5},${yZero} L${this.width - this.padding - 2},${yZero + 5}`,
+        fill: 'white'
+      })
+
       // X-axis labels
       for (let x = this.minX; x <= this.maxX; x += this.intervalX) {
         const xPos = this.scaleX(x);
@@ -135,6 +141,12 @@ export class PlotBuilder {
         stroke: 'white',
         'stroke-width': 1
       });
+
+      // Arrow
+      svg = svg.path({
+        d: `M${xZero - 5},${this.padding + 2} L${xZero},${this.padding - 5} L${xZero + 5},${this.padding + 2}`,
+        fill: 'white'
+      })
 
       // Y-axis labels
       for (let y = this.minY; y <= this.maxY; y += this.intervalY) {
